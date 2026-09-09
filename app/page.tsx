@@ -1,69 +1,102 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import StatTile from "@/components/StatTile";
+import HistoryChart from "@/components/HistoryChart";
+import type { Reading } from "@/lib/db";
+
+const POLL_INTERVAL_MS = 10_000;
+const POINT_OPTIONS = [50, 200, 500] as const;
+
+function formatUpdatedAt(iso: string) {
+  const d = new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
+  return d.toLocaleString("ja-JP");
+}
 
 export default function Home() {
+  const [readings, setReadings] = useState<Reading[]>([]);
+  const [limit, setLimit] = useState<(typeof POINT_OPTIONS)[number]>(200);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/readings?limit=${limit}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) {
+          setReadings(json.readings);
+          setError(null);
+        }
+      } catch {
+        if (!cancelled) setError("データの取得に失敗しました");
+      }
+    }
+
+    load();
+    const id = setInterval(load, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [limit]);
+
+  const latest = readings.at(-1);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+          AtomS3 + ENV.IV 環境モニター
+        </h1>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          {latest
+            ? `最終更新: ${formatUpdatedAt(latest.recorded_at)} (${latest.device_id})`
+            : "データを待機中..."}
+        </p>
+      </header>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <StatTile
+          label="気温"
+          value={latest ? latest.temperature.toFixed(1) : "--"}
+          unit="°C"
+          accent="#DC5F00"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <StatTile
+          label="湿度"
+          value={latest ? latest.humidity.toFixed(1) : "--"}
+          unit="%"
+          accent="#2563EB"
+        />
+      </div>
+
+      <div className="flex items-center justify-end gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <span>表示件数:</span>
+        {POINT_OPTIONS.map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setLimit(opt)}
+            className={`rounded-full px-3 py-1 ${
+              limit === opt
+                ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
+                : "bg-zinc-100 dark:bg-zinc-800"
+            }`}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            {opt}
+          </button>
+        ))}
+      </div>
+
+      <HistoryChart readings={readings} />
     </div>
   );
 }
