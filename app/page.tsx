@@ -43,7 +43,7 @@ export default function Home() {
     };
   }, [limit]);
 
-  const latest = readings.at(-1);
+  const latest = readings.length > 0 ? readings[readings.length - 1] : undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
