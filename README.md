@@ -7,6 +7,19 @@ M5Stack AtomS3 と ENV.IV ユニット（SHT40 温湿度センサー）から送
 - **保存**: SQLite（better-sqlite3）にローカルファイルとして保存
 - **表示**: 最新値のスタットタイルと、気温・湿度の推移グラフ（10秒ごとに自動更新）
 
+## システム構成
+
+```mermaid
+flowchart LR
+    subgraph device["AtomS3 + ENV.IV"]
+        sensor["SHT40センサー"] --> mcu["ESP32 (AtomS3)"]
+    end
+
+    mcu -- "POST /api/readings<br/>(x-api-keyで認証)" --> api["Next.js API Route<br/>(Railway)"]
+    api <--> db[("SQLite<br/>Railwayボリューム")]
+    browser["ブラウザ<br/>ダッシュボード"] -- "GET /api/readings<br/>(10秒ごとポーリング)" --> api
+```
+
 ## セットアップ
 
 ```bash
@@ -71,10 +84,9 @@ SQLite ファイルを永続化するため、**ボリューム**を必ずアタ
 
 ## AtomS3 + ENV.IV 側のファームウェア（Arduino）
 
-`firmware/NextJs.ino` を Arduino IDE で開いて書き込みます（実機のスケッチは
-`C:\Users\j10931\Documents\Arduino\NextJs\NextJs.ino` にあり、Wi-Fi情報やAPIキーなど
-実際の値が入っています。リポジトリにコミットされている `firmware/` 配下はプレースホルダに
-置き換えてあるので、書き込み前に自分の環境の値へ書き換えてください）。
+`firmware/NextJs.ino` を Arduino IDE で開いて書き込みます。リポジトリにコミットされている
+`firmware/` 配下はWi-Fi情報やAPIキーがプレースホルダになっているので、書き込み前に自分の
+環境の値へ書き換えてください。
 
 ポート転送用の `firmware/wsl-port-forward.ps1` は、WSL2環境でローカル確認する場合のみ必要です。
 
@@ -86,10 +98,17 @@ SQLite ファイルを永続化するため、**ボリューム**を必ずアタ
 書き込み前に、スケッチ冒頭の以下の値を実際の値に置き換えてください。
 
 ```cpp
-const char* ssid = "...";       // Wi-FiのSSID
-const char* password = "...";   // Wi-Fiのパスワード
-const char* serverName = "https://xxxx.up.railway.app/api/readings"; // RailwayのデプロイURL
-const char* apiKey = "...";     // サーバーの .env の API_KEY と同じ値
+const char* ssid = "...";      // Wi-FiのSSID
+const char* password = "...";  // Wi-Fiのパスワード
+
+const bool USE_LOCAL_SERVER = false; // true: ローカル確認用 / false: Railway本番
+
+const char* localServerName = "http://192.168.x.x:3000/api/readings"; // ローカル確認時のPCのLAN IP
+const char* localApiKey = "...";     // ローカルの .env.local の API_KEY と同じ値
+
+const char* prodServerName = "https://xxxx.up.railway.app/api/readings"; // RailwayのデプロイURL
+const char* prodApiKey = "...";      // RailwayのAPI_KEY変数と同じ値
+
 const char* deviceId = "atoms3-01";
 ```
 
