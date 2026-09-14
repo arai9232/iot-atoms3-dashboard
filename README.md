@@ -28,8 +28,6 @@ cp .env.example .env.local
 ```
 
 `.env.local` を編集し、`API_KEY` に任意のランダムな文字列を設定してください（AtomS3 側にも同じ値を設定します）。
-また、ダッシュボードはログイン必須のため `AUTH_PASSWORD`（ログインパスワード）と `SESSION_SECRET`
-（セッションCookeの署名鍵、`openssl rand -base64 32` などで生成）も設定してください。
 
 ```bash
 npm run dev
@@ -54,7 +52,7 @@ npm run dev
 | メソッド | パス | 説明 |
 |---|---|---|
 | POST | `/api/readings` | 1件のデータを登録。ヘッダー `x-api-key: <API_KEY>` が必須 |
-| GET | `/api/readings?limit=200` | 直近 N 件のデータを新しい順→古い順に整形して返す。ログインセッションが必須 |
+| GET | `/api/readings?limit=200` | 直近 N 件のデータを新しい順→古い順に整形して返す |
 
 POST のボディ例:
 
