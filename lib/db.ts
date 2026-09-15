@@ -13,7 +13,11 @@ function getDb(): Database.Database {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
   const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
+  // WAL mode relies on mmap()'d shared-memory (-shm) files, which crashes
+  // (SIGSEGV) on Railway's network-backed volume mounts. Use the default
+  // rollback journal instead; this app only ever has one writer process.
+  db.pragma("journal_mode = DELETE");
+  db.pragma("mmap_size = 0");
   db.exec(`
     CREATE TABLE IF NOT EXISTS readings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
