@@ -1,23 +1,23 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import fs from "node:fs";
 
 declare global {
-  var __db: Database.Database | undefined;
+  var __db: DatabaseSync | undefined;
 }
 
-function getDb(): Database.Database {
+function getDb(): DatabaseSync {
   if (global.__db) return global.__db;
 
   const DB_PATH = process.env.DB_PATH ?? path.join(process.cwd(), "data", "app.db");
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
-  const db = new Database(DB_PATH);
+  const db = new DatabaseSync(DB_PATH);
   // WAL mode relies on mmap()'d shared-memory (-shm) files, which crashes
   // (SIGSEGV) on Railway's network-backed volume mounts. Use the default
   // rollback journal instead; this app only ever has one writer process.
-  db.pragma("journal_mode = DELETE");
-  db.pragma("mmap_size = 0");
+  db.exec("PRAGMA journal_mode = DELETE");
+  db.exec("PRAGMA mmap_size = 0");
   db.exec(`
     CREATE TABLE IF NOT EXISTS readings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,7 +55,7 @@ export function getRecentReadings(limit: number): Reading[] {
        ORDER BY id DESC
        LIMIT ?`
     )
-    .all(limit) as Reading[];
+    .all(limit) as unknown as Reading[];
   return rows.reverse();
 }
 
@@ -67,5 +67,5 @@ export function getLatestReading(): Reading | undefined {
        ORDER BY id DESC
        LIMIT 1`
     )
-    .get() as Reading | undefined;
+    .get() as unknown as Reading | undefined;
 }
