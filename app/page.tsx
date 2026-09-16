@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import StatTile from "@/components/StatTile";
 import HistoryChart from "@/components/HistoryChart";
+import { logout } from "@/app/actions/auth";
 import type { Reading } from "@/lib/db";
 
 const POLL_INTERVAL_MS = 10_000;
@@ -48,9 +49,19 @@ export default function Home() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-          AtomS3 + ENV.IV 環境モニター
-        </h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+            AtomS3 + ENV.IV 環境モニター
+          </h1>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+            >
+              ログアウト
+            </button>
+          </form>
+        </div>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           {latest
             ? `最終更新: ${formatUpdatedAt(latest.recorded_at)} (${latest.device_id})`
