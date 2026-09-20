@@ -1,21 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import StatTile from "@/components/StatTile";
-import HistoryChart from "@/components/HistoryChart";
+import DeviceCard from "@/components/DeviceCard";
 import { logout } from "@/app/actions/auth";
 import type { Reading } from "@/lib/db";
 
 const POLL_INTERVAL_MS = 10_000;
 const POINT_OPTIONS = [50, 200, 500] as const;
 
-function formatUpdatedAt(iso: string) {
-  const d = new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
-  return d.toLocaleString("ja-JP");
-}
+type DeviceReadings = { device_id: string; readings: Reading[] };
 
 export default function Home() {
-  const [readings, setReadings] = useState<Reading[]>([]);
+  const [devices, setDevices] = useState<DeviceReadings[]>([]);
   const [limit, setLimit] = useState<(typeof POINT_OPTIONS)[number]>(200);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +24,7 @@ export default function Home() {
         if (!res.ok) throw new Error(`status ${res.status}`);
         const json = await res.json();
         if (!cancelled) {
-          setReadings(json.readings);
+          setDevices(json.devices);
           setError(null);
         }
       } catch {
@@ -44,29 +40,20 @@ export default function Home() {
     };
   }, [limit]);
 
-  const latest = readings.length > 0 ? readings[readings.length - 1] : undefined;
-
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
-      <header className="flex flex-col gap-1">
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
-            AtomS3 + ENV.IV 環境モニター
-          </h1>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-            >
-              ログアウト
-            </button>
-          </form>
-        </div>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          {latest
-            ? `最終更新: ${formatUpdatedAt(latest.recorded_at)} (${latest.device_id})`
-            : "データを待機中..."}
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+          AtomS3 + ENV.IV 環境モニター
+        </h1>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+          >
+            ログアウト
+          </button>
+        </form>
       </header>
 
       {error && (
@@ -74,21 +61,6 @@ export default function Home() {
           {error}
         </div>
       )}
-
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <StatTile
-          label="気温"
-          value={latest ? latest.temperature.toFixed(1) : "--"}
-          unit="°C"
-          accent="#DC5F00"
-        />
-        <StatTile
-          label="湿度"
-          value={latest ? latest.humidity.toFixed(1) : "--"}
-          unit="%"
-          accent="#2563EB"
-        />
-      </div>
 
       <div className="flex items-center justify-end gap-2 text-sm text-zinc-500 dark:text-zinc-400">
         <span>表示件数:</span>
@@ -107,7 +79,15 @@ export default function Home() {
         ))}
       </div>
 
-      <HistoryChart readings={readings} />
+      {devices.length === 0 ? (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">デバイスからのデータを待機中...</p>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {devices.map((d) => (
+            <DeviceCard key={d.device_id} deviceId={d.device_id} readings={d.readings} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

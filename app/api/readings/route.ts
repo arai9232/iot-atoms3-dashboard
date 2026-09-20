@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRecentReadings, insertReading } from "@/lib/db";
+import { getDeviceIds, getRecentReadingsByDevice, insertReading } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -42,6 +42,10 @@ export async function GET(req: NextRequest) {
   const limitParam = Number(req.nextUrl.searchParams.get("limit"));
   const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 1000) : 200;
 
-  const readings = getRecentReadings(limit);
-  return NextResponse.json({ readings });
+  const devices = getDeviceIds().map((deviceId) => ({
+    device_id: deviceId,
+    readings: getRecentReadingsByDevice(deviceId, limit),
+  }));
+
+  return NextResponse.json({ devices });
 }

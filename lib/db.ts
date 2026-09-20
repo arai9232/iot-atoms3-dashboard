@@ -27,6 +27,7 @@ function getDb(): DatabaseSync {
       recorded_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     );
     CREATE INDEX IF NOT EXISTS idx_readings_recorded_at ON readings (recorded_at);
+    CREATE INDEX IF NOT EXISTS idx_readings_device_id_id ON readings (device_id, id);
   `);
 
   global.__db = db;
@@ -47,18 +48,6 @@ export function insertReading(deviceId: string, temperature: number, humidity: n
     .run(deviceId, temperature, humidity);
 }
 
-export function getRecentReadings(limit: number): Reading[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT id, device_id, temperature, humidity, recorded_at
-       FROM readings
-       ORDER BY id DESC
-       LIMIT ?`
-    )
-    .all(limit) as unknown as Reading[];
-  return rows.reverse();
-}
-
 export function getLatestReading(): Reading | undefined {
   return getDb()
     .prepare(
@@ -68,4 +57,24 @@ export function getLatestReading(): Reading | undefined {
        LIMIT 1`
     )
     .get() as unknown as Reading | undefined;
+}
+
+export function getDeviceIds(): string[] {
+  const rows = getDb()
+    .prepare(`SELECT DISTINCT device_id FROM readings ORDER BY device_id ASC`)
+    .all() as unknown as { device_id: string }[];
+  return rows.map((r) => r.device_id);
+}
+
+export function getRecentReadingsByDevice(deviceId: string, limit: number): Reading[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT id, device_id, temperature, humidity, recorded_at
+       FROM readings
+       WHERE device_id = ?
+       ORDER BY id DESC
+       LIMIT ?`
+    )
+    .all(deviceId, limit) as unknown as Reading[];
+  return rows.reverse();
 }
