@@ -23,6 +23,8 @@ function formatTime(ms: number) {
   });
 }
 
+const TICK_COUNT = 6;
+
 export default function HistoryChart({
   readings,
   rangeMs,
@@ -31,6 +33,8 @@ export default function HistoryChart({
   rangeMs: number;
 }) {
   const now = Date.now();
+  const domainStart = now - rangeMs;
+  const ticks = Array.from({ length: TICK_COUNT + 1 }, (_, i) => domainStart + (i * rangeMs) / TICK_COUNT);
   const data = readings.map((r) => ({
     time: new Date(r.recorded_at.endsWith("Z") ? r.recorded_at : `${r.recorded_at}Z`).getTime(),
     temperature: r.temperature,
@@ -46,10 +50,10 @@ export default function HistoryChart({
             dataKey="time"
             type="number"
             scale="time"
-            domain={[now - rangeMs, now]}
+            domain={[domainStart, now]}
+            ticks={ticks}
             tickFormatter={formatTime}
             tick={{ fontSize: 12 }}
-            minTickGap={48}
           />
           <YAxis yAxisId="temp" tick={{ fontSize: 12 }} width={40} />
           <YAxis yAxisId="humidity" orientation="right" tick={{ fontSize: 12 }} width={40} />
