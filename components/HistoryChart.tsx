@@ -14,9 +14,8 @@ import type { Reading } from "@/lib/db";
 const TEMP_COLOR = "#DC5F00";
 const HUMIDITY_COLOR = "#2563EB";
 
-function formatTime(iso: string) {
-  const d = new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
-  return d.toLocaleString("ja-JP", {
+function formatTime(ms: number) {
+  return new Date(ms).toLocaleString("ja-JP", {
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
@@ -24,9 +23,16 @@ function formatTime(iso: string) {
   });
 }
 
-export default function HistoryChart({ readings }: { readings: Reading[] }) {
+export default function HistoryChart({
+  readings,
+  rangeMs,
+}: {
+  readings: Reading[];
+  rangeMs: number;
+}) {
+  const now = Date.now();
   const data = readings.map((r) => ({
-    time: formatTime(r.recorded_at),
+    time: new Date(r.recorded_at.endsWith("Z") ? r.recorded_at : `${r.recorded_at}Z`).getTime(),
     temperature: r.temperature,
     humidity: r.humidity,
   }));
@@ -36,11 +42,20 @@ export default function HistoryChart({ readings }: { readings: Reading[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" />
-          <XAxis dataKey="time" tick={{ fontSize: 12 }} minTickGap={48} />
+          <XAxis
+            dataKey="time"
+            type="number"
+            scale="time"
+            domain={[now - rangeMs, now]}
+            tickFormatter={formatTime}
+            tick={{ fontSize: 12 }}
+            minTickGap={48}
+          />
           <YAxis yAxisId="temp" tick={{ fontSize: 12 }} width={40} />
           <YAxis yAxisId="humidity" orientation="right" tick={{ fontSize: 12 }} width={40} />
           <Tooltip
             contentStyle={{ borderRadius: 12, fontSize: 12 }}
+            labelFormatter={(label) => formatTime(label as number)}
             formatter={(value, name) => {
               const num = typeof value === "number" ? value : Number(value);
               return name === "temperature" ? [`${num.toFixed(1)} °C`, "気温"] : [`${num.toFixed(1)} %`, "湿度"];

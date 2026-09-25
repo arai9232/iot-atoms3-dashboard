@@ -10,9 +10,11 @@ function formatUpdatedAt(iso: string) {
 export default function DeviceCard({
   deviceId,
   readings,
+  rangeMs,
 }: {
   deviceId: string;
   readings: Reading[];
+  rangeMs: number;
 }) {
   const latest = readings.length > 0 ? readings[readings.length - 1] : undefined;
 
@@ -40,7 +42,7 @@ export default function DeviceCard({
         />
       </div>
 
-      <HistoryChart readings={readings} />
+      <HistoryChart readings={readings} rangeMs={rangeMs} />
     </section>
   );
 }

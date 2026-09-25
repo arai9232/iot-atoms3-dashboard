@@ -3,14 +3,10 @@
 import { useEffect, useState } from "react";
 import DeviceCard from "@/components/DeviceCard";
 import { logout } from "@/app/actions/auth";
+import { RANGE_OPTIONS, rangeMs } from "@/lib/time-range";
 import type { Reading } from "@/lib/db";
 
 const POLL_INTERVAL_MS = 10_000;
-const RANGE_OPTIONS = [
-  { value: "1d", label: "1日" },
-  { value: "7d", label: "1週間" },
-  { value: "30d", label: "1か月" },
-] as const;
 
 type DeviceReadings = { device_id: string; readings: Reading[] };
 
@@ -88,7 +84,12 @@ export default function Home() {
       ) : (
         <div className="flex flex-col gap-6">
           {devices.map((d) => (
-            <DeviceCard key={d.device_id} deviceId={d.device_id} readings={d.readings} />
+            <DeviceCard
+              key={d.device_id}
+              deviceId={d.device_id}
+              readings={d.readings}
+              rangeMs={rangeMs(range)}
+            />
           ))}
         </div>
       )}
