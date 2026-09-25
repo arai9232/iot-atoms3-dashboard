@@ -66,15 +66,17 @@ export function getDeviceIds(): string[] {
   return rows.map((r) => r.device_id);
 }
 
-export function getRecentReadingsByDevice(deviceId: string, limit: number): Reading[] {
+const MAX_READINGS_PER_DEVICE = 5000;
+
+export function getReadingsSince(deviceId: string, sinceIso: string): Reading[] {
   const rows = getDb()
     .prepare(
       `SELECT id, device_id, temperature, humidity, recorded_at
        FROM readings
-       WHERE device_id = ?
+       WHERE device_id = ? AND recorded_at >= ?
        ORDER BY id DESC
        LIMIT ?`
     )
-    .all(deviceId, limit) as unknown as Reading[];
+    .all(deviceId, sinceIso, MAX_READINGS_PER_DEVICE) as unknown as Reading[];
   return rows.reverse();
 }

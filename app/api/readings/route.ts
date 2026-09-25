@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDeviceIds, getRecentReadingsByDevice, insertReading } from "@/lib/db";
+import { getDeviceIds, getReadingsSince, insertReading } from "@/lib/db";
+
+const RANGE_MS: Record<string, number> = {
+  "1d": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  "30d": 30 * 24 * 60 * 60 * 1000,
+};
 
 export const runtime = "nodejs";
 
@@ -39,12 +45,13 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const limitParam = Number(req.nextUrl.searchParams.get("limit"));
-  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 1000) : 200;
+  const rangeParam = req.nextUrl.searchParams.get("range") ?? "1d";
+  const rangeMs = RANGE_MS[rangeParam] ?? RANGE_MS["1d"];
+  const sinceIso = new Date(Date.now() - rangeMs).toISOString();
 
   const devices = getDeviceIds().map((deviceId) => ({
     device_id: deviceId,
-    readings: getRecentReadingsByDevice(deviceId, limit),
+    readings: getReadingsSince(deviceId, sinceIso),
   }));
 
   return NextResponse.json({ devices });

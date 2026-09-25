@@ -6,13 +6,17 @@ import { logout } from "@/app/actions/auth";
 import type { Reading } from "@/lib/db";
 
 const POLL_INTERVAL_MS = 10_000;
-const POINT_OPTIONS = [50, 200, 500] as const;
+const RANGE_OPTIONS = [
+  { value: "1d", label: "1日" },
+  { value: "7d", label: "1週間" },
+  { value: "30d", label: "1か月" },
+] as const;
 
 type DeviceReadings = { device_id: string; readings: Reading[] };
 
 export default function Home() {
   const [devices, setDevices] = useState<DeviceReadings[]>([]);
-  const [limit, setLimit] = useState<(typeof POINT_OPTIONS)[number]>(200);
+  const [range, setRange] = useState<(typeof RANGE_OPTIONS)[number]["value"]>("1d");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +24,7 @@ export default function Home() {
 
     async function load() {
       try {
-        const res = await fetch(`/api/readings?limit=${limit}`, { cache: "no-store" });
+        const res = await fetch(`/api/readings?range=${range}`, { cache: "no-store" });
         if (!res.ok) throw new Error(`status ${res.status}`);
         const json = await res.json();
         if (!cancelled) {
@@ -38,7 +42,7 @@ export default function Home() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [limit]);
+  }, [range]);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-10">
@@ -63,18 +67,18 @@ export default function Home() {
       )}
 
       <div className="flex items-center justify-end gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-        <span>表示件数:</span>
-        {POINT_OPTIONS.map((opt) => (
+        <span>表示期間:</span>
+        {RANGE_OPTIONS.map((opt) => (
           <button
-            key={opt}
-            onClick={() => setLimit(opt)}
+            key={opt.value}
+            onClick={() => setRange(opt.value)}
             className={`rounded-full px-3 py-1 ${
-              limit === opt
+              range === opt.value
                 ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
                 : "bg-zinc-100 dark:bg-zinc-800"
             }`}
           >
-            {opt}
+            {opt.label}
           </button>
         ))}
       </div>

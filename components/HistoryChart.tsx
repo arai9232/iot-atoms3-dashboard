@@ -16,7 +16,12 @@ const HUMIDITY_COLOR = "#2563EB";
 
 function formatTime(iso: string) {
   const d = new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
-  return d.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function HistoryChart({ readings }: { readings: Reading[] }) {
@@ -31,7 +36,7 @@ export default function HistoryChart({ readings }: { readings: Reading[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" />
-          <XAxis dataKey="time" tick={{ fontSize: 12 }} minTickGap={24} />
+          <XAxis dataKey="time" tick={{ fontSize: 12 }} minTickGap={48} />
           <YAxis yAxisId="temp" tick={{ fontSize: 12 }} width={40} />
           <YAxis yAxisId="humidity" orientation="right" tick={{ fontSize: 12 }} width={40} />
           <Tooltip
