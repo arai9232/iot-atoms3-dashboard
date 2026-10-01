@@ -28,12 +28,13 @@ const TICK_COUNT = 6;
 export default function HistoryChart({
   readings,
   rangeMs,
+  until,
 }: {
   readings: Reading[];
   rangeMs: number;
+  until: number;
 }) {
-  const now = Date.now();
-  const domainStart = now - rangeMs;
+  const domainStart = until - rangeMs;
   const ticks = Array.from({ length: TICK_COUNT + 1 }, (_, i) => domainStart + (i * rangeMs) / TICK_COUNT);
   const data = readings.map((r) => ({
     time: new Date(r.recorded_at.endsWith("Z") ? r.recorded_at : `${r.recorded_at}Z`).getTime(),
@@ -50,7 +51,7 @@ export default function HistoryChart({
             dataKey="time"
             type="number"
             scale="time"
-            domain={[domainStart, now]}
+            domain={[domainStart, until]}
             ticks={ticks}
             tickFormatter={formatTime}
             tick={{ fontSize: 12 }}

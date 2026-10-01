@@ -68,15 +68,22 @@ export function getDeviceIds(): string[] {
 
 const MAX_READINGS_PER_DEVICE = 5000;
 
-export function getReadingsSince(deviceId: string, sinceIso: string): Reading[] {
+export function getReadingsInRange(deviceId: string, sinceIso: string, untilIso: string): Reading[] {
   const rows = getDb()
     .prepare(
       `SELECT id, device_id, temperature, humidity, recorded_at
        FROM readings
-       WHERE device_id = ? AND recorded_at >= ?
+       WHERE device_id = ? AND recorded_at >= ? AND recorded_at <= ?
        ORDER BY id DESC
        LIMIT ?`
     )
-    .all(deviceId, sinceIso, MAX_READINGS_PER_DEVICE) as unknown as Reading[];
+    .all(deviceId, sinceIso, untilIso, MAX_READINGS_PER_DEVICE) as unknown as Reading[];
   return rows.reverse();
+}
+
+export function getEarliestRecordedAt(): string | undefined {
+  const row = getDb()
+    .prepare(`SELECT MIN(recorded_at) AS earliest FROM readings`)
+    .get() as unknown as { earliest: string | null };
+  return row.earliest ?? undefined;
 }

@@ -11,10 +11,12 @@ export default function DeviceCard({
   deviceId,
   readings,
   rangeMs,
+  until,
 }: {
   deviceId: string;
   readings: Reading[];
   rangeMs: number;
+  until: number;
 }) {
   const latest = readings.length > 0 ? readings[readings.length - 1] : undefined;
 
@@ -42,7 +44,7 @@ export default function DeviceCard({
         />
       </div>
 
-      <HistoryChart readings={readings} rangeMs={rangeMs} />
+      <HistoryChart readings={readings} rangeMs={rangeMs} until={until} />
     </section>
   );
 }

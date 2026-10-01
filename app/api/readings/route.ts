@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDeviceIds, getReadingsSince, insertReading } from "@/lib/db";
+import { getDeviceIds, getEarliestRecordedAt, getReadingsInRange, insertReading } from "@/lib/db";
 import { rangeMs } from "@/lib/time-range";
 
 export const runtime = "nodejs";
@@ -41,12 +41,18 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const rangeParam = req.nextUrl.searchParams.get("range") ?? "1d";
-  const sinceIso = new Date(Date.now() - rangeMs(rangeParam)).toISOString();
+  const untilParam = Number(req.nextUrl.searchParams.get("until"));
+  const until = Number.isFinite(untilParam) && untilParam > 0 ? untilParam : Date.now();
+
+  const sinceIso = new Date(until - rangeMs(rangeParam)).toISOString();
+  const untilIso = new Date(until).toISOString();
 
   const devices = getDeviceIds().map((deviceId) => ({
     device_id: deviceId,
-    readings: getReadingsSince(deviceId, sinceIso),
+    readings: getReadingsInRange(deviceId, sinceIso, untilIso),
   }));
 
-  return NextResponse.json({ devices });
+  const earliestRecordedAt = getEarliestRecordedAt() ?? null;
+
+  return NextResponse.json({ devices, earliestRecordedAt });
 }
