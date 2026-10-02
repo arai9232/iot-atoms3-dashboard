@@ -28,6 +28,24 @@ function getDb(): DatabaseSync {
     );
     CREATE INDEX IF NOT EXISTS idx_readings_recorded_at ON readings (recorded_at);
     CREATE INDEX IF NOT EXISTS idx_readings_device_id_id ON readings (device_id, id);
+
+    CREATE TABLE IF NOT EXISTS devices (
+      device_id TEXT PRIMARY KEY,
+      display_name TEXT,
+      hidden INTEGER NOT NULL DEFAULT 0,
+      temp_min REAL,
+      temp_max REAL,
+      humidity_min REAL,
+      humidity_max REAL
+    );
+
+    CREATE TABLE IF NOT EXISTS login_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT,
+      success INTEGER NOT NULL,
+      ip TEXT,
+      created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    );
   `);
 
   global.__db = db;
@@ -43,9 +61,13 @@ export type Reading = {
 };
 
 export function insertReading(deviceId: string, temperature: number, humidity: number) {
-  getDb()
-    .prepare(`INSERT INTO readings (device_id, temperature, humidity) VALUES (?, ?, ?)`)
-    .run(deviceId, temperature, humidity);
+  const db = getDb();
+  db.prepare(`INSERT OR IGNORE INTO devices (device_id) VALUES (?)`).run(deviceId);
+  db.prepare(`INSERT INTO readings (device_id, temperature, humidity) VALUES (?, ?, ?)`).run(
+    deviceId,
+    temperature,
+    humidity
+  );
 }
 
 export function getLatestReading(): Reading | undefined {
@@ -59,11 +81,93 @@ export function getLatestReading(): Reading | undefined {
     .get() as unknown as Reading | undefined;
 }
 
-export function getDeviceIds(): string[] {
+export type DeviceMeta = {
+  device_id: string;
+  display_name: string | null;
+  hidden: boolean;
+  temp_min: number | null;
+  temp_max: number | null;
+  humidity_min: number | null;
+  humidity_max: number | null;
+};
+
+type DeviceRow = Omit<DeviceMeta, "hidden"> & { hidden: number };
+
+function rowToDeviceMeta(row: DeviceRow): DeviceMeta {
+  return { ...row, hidden: row.hidden !== 0 };
+}
+
+export function getVisibleDevices(): DeviceMeta[] {
   const rows = getDb()
-    .prepare(`SELECT DISTINCT device_id FROM readings ORDER BY device_id ASC`)
-    .all() as unknown as { device_id: string }[];
-  return rows.map((r) => r.device_id);
+    .prepare(
+      `SELECT device_id, display_name, hidden, temp_min, temp_max, humidity_min, humidity_max
+       FROM devices
+       WHERE hidden = 0
+       ORDER BY device_id ASC`
+    )
+    .all() as unknown as DeviceRow[];
+  return rows.map(rowToDeviceMeta);
+}
+
+export function getAllDevices(): DeviceMeta[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT device_id, display_name, hidden, temp_min, temp_max, humidity_min, humidity_max
+       FROM devices
+       ORDER BY device_id ASC`
+    )
+    .all() as unknown as DeviceRow[];
+  return rows.map(rowToDeviceMeta);
+}
+
+export type DeviceSettingsInput = {
+  displayName: string | null;
+  hidden: boolean;
+  tempMin: number | null;
+  tempMax: number | null;
+  humidityMin: number | null;
+  humidityMax: number | null;
+};
+
+export function updateDeviceSettings(deviceId: string, settings: DeviceSettingsInput) {
+  getDb()
+    .prepare(
+      `UPDATE devices
+       SET display_name = ?, hidden = ?, temp_min = ?, temp_max = ?, humidity_min = ?, humidity_max = ?
+       WHERE device_id = ?`
+    )
+    .run(
+      settings.displayName,
+      settings.hidden ? 1 : 0,
+      settings.tempMin,
+      settings.tempMax,
+      settings.humidityMin,
+      settings.humidityMax,
+      deviceId
+    );
+}
+
+export type LoginEvent = {
+  id: number;
+  role: string | null;
+  success: boolean;
+  ip: string | null;
+  created_at: string;
+};
+
+type LoginEventRow = Omit<LoginEvent, "success"> & { success: number };
+
+export function logLoginAttempt(role: "admin" | "viewer" | null, success: boolean, ip: string | null) {
+  getDb()
+    .prepare(`INSERT INTO login_events (role, success, ip) VALUES (?, ?, ?)`)
+    .run(role, success ? 1 : 0, ip);
+}
+
+export function getLoginEvents(limit: number): LoginEvent[] {
+  const rows = getDb()
+    .prepare(`SELECT id, role, success, ip, created_at FROM login_events ORDER BY id DESC LIMIT ?`)
+    .all(limit) as unknown as LoginEventRow[];
+  return rows.map((r) => ({ ...r, success: r.success !== 0 }));
 }
 
 const MAX_READINGS_PER_DEVICE = 5000;

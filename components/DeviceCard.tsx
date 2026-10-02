@@ -2,31 +2,61 @@ import StatTile from "@/components/StatTile";
 import HistoryChart from "@/components/HistoryChart";
 import type { Reading } from "@/lib/db";
 
+const WARNING_COLOR = "#DC2626";
+
 function formatUpdatedAt(iso: string) {
   const d = new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
   return d.toLocaleString("ja-JP");
 }
 
+export type DeviceThresholds = {
+  tempMin: number | null;
+  tempMax: number | null;
+  humidityMin: number | null;
+  humidityMax: number | null;
+};
+
+function outOfRange(value: number, min: number | null, max: number | null): boolean {
+  return (min !== null && value < min) || (max !== null && value > max);
+}
+
 export default function DeviceCard({
   deviceId,
+  displayName,
   readings,
   rangeMs,
   until,
+  thresholds,
 }: {
   deviceId: string;
+  displayName: string | null;
   readings: Reading[];
   rangeMs: number;
   until: number;
+  thresholds: DeviceThresholds;
 }) {
   const latest = readings.length > 0 ? readings[readings.length - 1] : undefined;
+
+  const tempWarning = latest ? outOfRange(latest.temperature, thresholds.tempMin, thresholds.tempMax) : false;
+  const humidityWarning = latest
+    ? outOfRange(latest.humidity, thresholds.humidityMin, thresholds.humidityMax)
+    : false;
 
   return (
     <section className="flex flex-col gap-4 rounded-3xl border border-zinc-200 bg-zinc-50/50 p-6 dark:border-zinc-800 dark:bg-zinc-950/50">
       <header className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{deviceId}</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          {displayName ?? deviceId}
+        </h2>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           {latest ? `最終更新: ${formatUpdatedAt(latest.recorded_at)}` : "データを待機中..."}
         </p>
+        {(tempWarning || humidityWarning) && (
+          <p className="text-sm font-medium text-red-600 dark:text-red-400">
+            ⚠ {[tempWarning && "気温", humidityWarning && "湿度"].filter(Boolean).join("・")}
+            が設定範囲外です
+          </p>
+        )}
       </header>
 
       <div className="flex flex-col gap-4 sm:flex-row">
@@ -34,13 +64,13 @@ export default function DeviceCard({
           label="気温"
           value={latest ? latest.temperature.toFixed(1) : "--"}
           unit="°C"
-          accent="#DC5F00"
+          accent={tempWarning ? WARNING_COLOR : "#DC5F00"}
         />
         <StatTile
           label="湿度"
           value={latest ? latest.humidity.toFixed(1) : "--"}
           unit="%"
-          accent="#2563EB"
+          accent={humidityWarning ? WARNING_COLOR : "#2563EB"}
         />
       </div>
 

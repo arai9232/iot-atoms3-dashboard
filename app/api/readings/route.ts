@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDeviceIds, getEarliestRecordedAt, getReadingsInRange, insertReading } from "@/lib/db";
+import { getEarliestRecordedAt, getReadingsInRange, getVisibleDevices, insertReading } from "@/lib/db";
 import { rangeMs } from "@/lib/time-range";
 
 export const runtime = "nodejs";
@@ -47,9 +47,9 @@ export async function GET(req: NextRequest) {
   const sinceIso = new Date(until - rangeMs(rangeParam)).toISOString();
   const untilIso = new Date(until).toISOString();
 
-  const devices = getDeviceIds().map((deviceId) => ({
-    device_id: deviceId,
-    readings: getReadingsInRange(deviceId, sinceIso, untilIso),
+  const devices = getVisibleDevices().map((device) => ({
+    ...device,
+    readings: getReadingsInRange(device.device_id, sinceIso, untilIso),
   }));
 
   const earliestRecordedAt = getEarliestRecordedAt() ?? null;

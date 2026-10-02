@@ -28,8 +28,11 @@ cp .env.example .env.local
 ```
 
 `.env.local` を編集し、`API_KEY` に任意のランダムな文字列を設定してください（AtomS3 側にも同じ値を設定します）。
-また、ダッシュボードはログイン必須のため `AUTH_PASSWORD`（ログインパスワード）と `SESSION_SECRET`
+また、ダッシュボードはログイン必須のため `AUTH_PASSWORD`（閲覧用ログインパスワード）、
+`ADMIN_PASSWORD`（`/admin` にアクセスできる管理者用ログインパスワード）、`SESSION_SECRET`
 （セッションCookeの署名鍵、`openssl rand -base64 32` などで生成）も設定してください。
+ログインフォームは共通で、入力したパスワードが `ADMIN_PASSWORD` と一致すれば管理者として、
+`AUTH_PASSWORD` と一致すれば閲覧者としてログインします。
 
 ```bash
 npm run dev

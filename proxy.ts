@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isValidSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth-token";
+import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/auth-token";
 
 const PUBLIC_PATHS = new Set(["/login"]);
 
@@ -11,20 +11,24 @@ export default function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const hasValidSession = isValidSessionToken(req.cookies.get(SESSION_COOKIE_NAME)?.value);
+  const session = verifySessionToken(req.cookies.get(SESSION_COOKIE_NAME)?.value);
 
   if (PUBLIC_PATHS.has(pathname)) {
-    if (hasValidSession) {
+    if (session) {
       return NextResponse.redirect(new URL("/", req.nextUrl));
     }
     return NextResponse.next();
   }
 
-  if (!hasValidSession) {
+  if (!session) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
     return NextResponse.redirect(new URL("/login", req.nextUrl));
+  }
+
+  if (pathname.startsWith("/admin") && session.role !== "admin") {
+    return NextResponse.redirect(new URL("/", req.nextUrl));
   }
 
   return NextResponse.next();

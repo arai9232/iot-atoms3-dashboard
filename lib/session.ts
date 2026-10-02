@@ -1,9 +1,14 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth-token";
+import {
+  createSessionToken,
+  verifySessionToken,
+  SESSION_COOKIE_NAME,
+  type SessionRole,
+} from "@/lib/auth-token";
 
-export async function createSession() {
-  const { token, expiresAt } = createSessionToken();
+export async function createSession(role: SessionRole) {
+  const { token, expiresAt } = createSessionToken(role);
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
@@ -12,6 +17,12 @@ export async function createSession() {
     expires: expiresAt,
     path: "/",
   });
+}
+
+export async function getSessionRole(): Promise<SessionRole | null> {
+  const cookieStore = await cookies();
+  const session = verifySessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value);
+  return session?.role ?? null;
 }
 
 export async function deleteSession() {
