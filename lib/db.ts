@@ -48,6 +48,10 @@ function getDb(): DatabaseSync {
     );
   `);
 
+  // Backfill devices that already had readings before the devices table existed,
+  // so they don't silently vanish from getVisibleDevices()/getAllDevices().
+  db.exec(`INSERT OR IGNORE INTO devices (device_id) SELECT DISTINCT device_id FROM readings`);
+
   global.__db = db;
   return db;
 }
