@@ -4,7 +4,7 @@ M5Stack AtomS3 と ENV.IV ユニット（SHT40 温湿度センサー）から送
 受信・保存・可視化する Next.js アプリです。
 
 - **受信**: `POST /api/readings` に AtomS3 から JSON を送信（`x-api-key` ヘッダーで認証）
-- **保存**: SQLite（better-sqlite3）にローカルファイルとして保存
+- **保存**: SQLite（Node.js標準の`node:sqlite`）にローカルファイルとして保存
 - **表示**: 最新値のスタットタイルと、気温・湿度の推移グラフ（10秒ごとに自動更新）
 
 ## システム構成
@@ -130,5 +130,5 @@ const char* deviceId = "atoms3-01";
 ## 技術スタック
 
 - Next.js (App Router) / TypeScript / Tailwind CSS
-- better-sqlite3（Railway のボリュームにファイルとして永続化）
+- `node:sqlite`（Railway のボリュームにファイルとして永続化）
 - recharts（推移グラフ表示）
